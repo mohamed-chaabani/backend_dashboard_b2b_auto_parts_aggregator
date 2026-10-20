@@ -1,5 +1,7 @@
 const Admin = require('../models/Admin');
 const User = require('../models/user');
+const AppError = require('../models/AppError');
+const ClientSnapshot = require('../models/ClientSnapshot');
 const jwt = require('jsonwebtoken');
 const { PLANS, PLAN_IDS, getPlan, expiryFromPlan, statusFor } = require('../plans');
 
@@ -50,7 +52,57 @@ const adminService = {
             users = users.filter((u) => statusFor(u.expiryDate) === status);
         }
 
-        return users.map((u) => u.toPublic());
+        // Telemetry counts per client (joined on clientId = user id):
+        // nb d'erreurs rapportees + nb de fournisseurs "non configure".
+        // Errors sent before login only carry machineId -> counted via the
+        // client's snapshots (same join as GET /admin/clients/:id profile).
+        const rows = users.map((u) => u.toPublic());
+        const ids = rows.map((r) => String(r.id));
+        let errCount = {};
+        let snapCount = {};
+        if (ids.length) {
+            const snaps = await ClientSnapshot.find(
+                { clientId: { $in: ids } },
+                { clientId: 1, machineId: 1 },
+            ).lean();
+            const machines = [...new Set(snaps.map((s) => s.machineId).filter(Boolean))];
+            const clientByMachine = Object.fromEntries(
+                snaps.filter((s) => s.machineId && s.clientId).map((s) => [s.machineId, s.clientId]),
+            );
+            const [errByClient, errByMachine, snapAgg] = await Promise.all([
+                AppError.aggregate([
+                    { $match: { clientId: { $in: ids } } },
+                    { $group: { _id: '$clientId', n: { $sum: 1 } } },
+                ]),
+                machines.length
+                    ? AppError.aggregate([
+                        {
+                            $match: {
+                                machineId: { $in: machines },
+                                $or: [{ clientId: '' }, { clientId: { $exists: false } }],
+                            },
+                        },
+                        { $group: { _id: '$machineId', n: { $sum: 1 } } },
+                    ])
+                    : [],
+                ClientSnapshot.aggregate([
+                    { $match: { clientId: { $in: ids } } },
+                    { $group: { _id: '$clientId', n: { $sum: { $size: '$unconfigured' } } } },
+                ]),
+            ]);
+            for (const g of errByClient) errCount[String(g._id)] = g.n;
+            for (const g of errByMachine) {
+                const c = clientByMachine[String(g._id)];
+                if (c) errCount[String(c)] = (errCount[String(c)] || 0) + g.n;
+            }
+            snapCount = Object.fromEntries(snapAgg.map((g) => [String(g._id), g.n]));
+        }
+
+        return rows.map((r) => ({
+            ...r,
+            errorCount: errCount[String(r.id)] || 0,
+            unconfiguredCount: snapCount[String(r.id)] || 0,
+        }));
     },
 
     // Creation : expiryDate = date de creation + duree du plan (si non fournie)

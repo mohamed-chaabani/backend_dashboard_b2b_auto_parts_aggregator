@@ -28,7 +28,8 @@ const adminService = {
       throw new Error("Email et mot de passe sont obligatoires");
     }
 
-    const admin = await Admin.find({ email: email.toLowerCase() });
+    // find() retourne un tableau : on destructure le premier resultat
+    const [admin] = await Admin.find({ email: email.toLowerCase() });
     if (admin) {
       const ok = await admin.isPasswordValid(password);
       if (!ok) throw new Error("Identifiants admin invalides");

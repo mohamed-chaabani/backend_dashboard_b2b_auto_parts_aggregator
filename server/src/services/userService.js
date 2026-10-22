@@ -19,7 +19,8 @@ const userService = {
       throw new Error("Username et mot de passe sont obligatoires");
     }
 
-    const user = await User.find({ username: username.trim().toLowerCase() });
+    // find() retourne un tableau : on destructure le premier resultat
+    const [user] = await User.find({ username: username.trim().toLowerCase() });
     if (!user) {
       throw new Error("Utilisateur non trouve");
     }

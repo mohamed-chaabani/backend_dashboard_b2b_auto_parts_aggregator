@@ -18,7 +18,8 @@
     "validator": "^13.12.0"
   },
   "scripts": {
-    "start": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "create-admin": "node src/scripts/create-admin.js"
   },
   "author": "",

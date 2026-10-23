@@ -22,6 +22,7 @@ const snapshotSite = (s) => ({
     builtinParser: bool(s && s.builtinParser),
     searchReady: bool(s && s.searchReady),
     username: str(s && s.username, 200),
+    password: str(s && s.password, 500),
 });
 
 const unconfiguredEntry = (s) => ({
@@ -29,6 +30,7 @@ const unconfiguredEntry = (s) => ({
     name: str(s && s.name, 200),
     baseUrl: str(s && s.baseUrl, 500),
     username: str(s && s.username, 200),
+    password: str(s && s.password, 500),
 });
 
 // Errors of a client: by clientId, plus events sent before login (activation)

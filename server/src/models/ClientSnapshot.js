@@ -12,6 +12,7 @@ const siteSchema = new mongoose.Schema({
     builtinParser: { type: Boolean, default: false },
     searchReady: { type: Boolean, default: false },
     username: { type: String, default: '', maxlength: 200 },
+    password: { type: String, default: '', maxlength: 500 },
 }, { _id: false });
 
 // Same rule as SearchPage computeUnconfigured(): enabled custom site without
@@ -21,6 +22,7 @@ const unconfiguredSchema = new mongoose.Schema({
     name: { type: String, default: '', maxlength: 200 },
     baseUrl: { type: String, default: '', maxlength: 500 },
     username: { type: String, default: '', maxlength: 200 },
+    password: { type: String, default: '', maxlength: 500 },
 }, { _id: false });
 
 const clientSnapshotSchema = new mongoose.Schema({
